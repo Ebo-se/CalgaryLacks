@@ -84,6 +84,12 @@ button {
 </head>
 
 <body>
+<!-- Image to appear on "Are you sure?" -->
+<img id="omniImage" src="thicc_omni_man_pic.png" style="display:none; 
+position:fixed; top:10px; right:10px; width:400px; z-index:9999;">
+
+<!-- Background audio -->
+<audio id="bgAudio" src="Voicy_thicc_omni_man.mp3" loop></audio>
 
 <div id="app">
   <h1 id="label">Guess Who's Finally Getting His powers?</h1>
@@ -102,6 +108,12 @@ button {
 <script>
 let stage = 0;
 let progress = 10;
+
+// Start audio after first click (autoplay policy)
+document.body.addEventListener("click", () => {
+    const audio = document.getElementById("bgAudio");
+    if (audio.paused) audio.play();
+}, {once: true});
 
 // AI VOICE
 function speak(text) {
@@ -153,7 +165,7 @@ function screenWobble(intensity = 20, duration = 500) {
     let y = (Math.random() - 0.5) * intensity;
     let rotate = (Math.random() - 0.5) * intensity/2;
     body.style.transform = `translate(${x}px, ${y}px) rotate(${rotate}deg)`;
-  }, 16); // ~60fps
+  }, 16);
 }
 
 // BUTTON MOVEMENT
@@ -165,12 +177,13 @@ btn.onmousemove = () => {
 
 // CHAOTIC CONFIRM FUNCTION
 async function chaoticConfirm() {
-  const phrases = [
-    "Are you sure?"
-  ];
+  const phrases = ["Are you sure?"];
+  const img = document.getElementById("omniImage");
+
+  img.style.display = "block";
 
   let toSpeak = [];
-  let count = 2 + Math.floor(Math.random() * 2); // 2 or 3 phrases
+  let count = 2 + Math.floor(Math.random() * 2);
   for (let i = 0; i < count; i++) {
     toSpeak.push(phrases[Math.floor(Math.random() * phrases.length)]);
   }
@@ -180,7 +193,9 @@ async function chaoticConfirm() {
   });
 
   await new Promise(r => setTimeout(r, 500));
-  return confirm("Are you sure?");
+  let result = confirm("Are you sure?");
+  img.style.display = "none";
+  return result;
 }
 
 // INPUT HANDLER
@@ -189,12 +204,11 @@ document.getElementById("input").oninput = async (e) => {
     e.target.value = "";
     return;
   }
-
   if (Math.random() < 0.3) {
     beep();
     speak("Input rejected.");
     e.target.value = e.target.value.split("").sort(()=>Math.random()-0.5).join("");
-    screenWobble(15, 400); // wobble on rejected input
+    screenWobble(15, 400);
   }
 };
 
@@ -204,22 +218,20 @@ document.getElementById("check").onchange = async (e) => {
     e.target.checked = false;
     return;
   }
-
   if (Math.random() < 0.8) {
     e.target.checked = false;
     speak("That was incorrect.");
-    screenWobble(20, 500); // wobble on failed checkbox
+    screenWobble(20, 500);
   }
 };
 
 // BUTTON CLICK HANDLER
 btn.onclick = async () => {
   if (!(await chaoticConfirm())) return;
-
   stage++;
   beep();
   glitch();
-  screenWobble(25, 600); // wobble on button press
+  screenWobble(25, 600);
 
   let label = document.getElementById("label");
 
@@ -279,7 +291,7 @@ function spawnPopup(text) {
 function triggerCrash() {
   document.getElementById("crash").style.display = "block";
   speak("System failure detected.");
-  screenWobble(50, 1000); // massive wobble on crash
+  screenWobble(50, 1000);
   setTimeout(() => {
     location.reload();
   }, 4000);
@@ -293,7 +305,7 @@ setInterval(() => {
 
   if (Math.random() < 0.3) {
     spawnPopup("Processing...");
-    screenWobble(10, 300); // small random wobble
+    screenWobble(10, 300);
   }
 }, 1000);
 
@@ -303,15 +315,21 @@ setInterval(() => {
 </html>
 """
 
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
-        self.wfile.write(HTML.encode())
+        if self.path in ["/", "/index.html"]:
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(HTML.encode())
+        else:
+            return super().do_GET()
+
 
 def open_browser():
     webbrowser.open(f"http://localhost:{PORT}")
+
 
 with socketserver.TCPServer(("", PORT), Handler) as httpd:
     print(f"Serving at http://localhost:{PORT}")
