@@ -15,17 +15,15 @@ HTML = """
 <style>
 body {
   margin: 0;
-  background: yellow; /* Yellow background */
-  color: blue;         /* Blue text */
+  background: yellow;
+  color: blue;
   font-family: Arial;
   text-align: center;
   overflow: hidden;
   transform-origin: center center;
 }
 
-#app {
-  margin-top: 60px;
-}
+#app { margin-top: 60px; }
 
 button {
   position: absolute;
@@ -45,17 +43,13 @@ button {
   background: lime;
 }
 
-/* GLITCH */
-.glitch {
-  animation: glitch 0.15s infinite;
-}
+.glitch { animation: glitch 0.15s infinite; }
 @keyframes glitch {
   0% { transform: translate(2px, -2px); }
   50% { transform: translate(-3px, 3px); }
   100% { transform: translate(0,0); }
 }
 
-/* POPUPS */
 .popup {
   position: absolute;
   width: 200px;
@@ -66,14 +60,11 @@ button {
   padding: 5px;
 }
 
-/*FAKE CRASH */
 #crash {
   display: none;
   position: fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  top:0; left:0;
+  width:100%; height:100%;
   background:black;
   color:#00ffcc;
   font-family: monospace;
@@ -84,11 +75,10 @@ button {
 </head>
 
 <body>
-<!-- Image to appear on "Are you sure?" -->
-<img id="omniImage" src="thicc_omni_man_pic.png" style="display:none; 
-position:fixed; top:10px; right:10px; width:400px; z-index:9999;">
 
-<!-- Background audio -->
+<img id="omniImage" src="thicc_omni_man_pic.png"
+style="display:none; position:fixed; top:10px; right:10px; width:400px; z-index:9999;">
+
 <audio id="bgAudio" src="Voicy_thicc_omni_man.mp3" loop></audio>
 
 <div id="app">
@@ -109,48 +99,88 @@ position:fixed; top:10px; right:10px; width:400px; z-index:9999;">
 let stage = 0;
 let progress = 10;
 
-// Start audio after first click (autoplay policy)
+// AUDIO CONTEXT
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+// ✅ Resume AudioContext on first click (REQUIRED)
 document.body.addEventListener("click", () => {
-    const audio = document.getElementById("bgAudio");
-    if (audio.paused) audio.play();
+    if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+    }
+
+    const bg = document.getElementById("bgAudio");
+    if (bg.paused) bg.play();
 }, {once: true});
 
-// AI VOICE
-function speak(text) {
-  let msg = new SpeechSynthesisUtterance(text);
-  msg.rate = 0.9;
-  msg.pitch = 0.8;
-  speechSynthesis.speak(msg);
+// 🔥 CHAOS AUDIO
+function playChaosAudio() {
+  let layers = 6 + Math.floor(Math.random() * 6);
+
+  for (let i = 0; i < layers; i++) {
+
+    let audio = new Audio("are-you-sure-omni-man.mp3");
+    audio.load();
+
+    audio.volume = Math.min(1, Math.random() * 1.5);
+    audio.playbackRate = 0.5 + Math.random() * 2.5;
+
+    if (Math.random() < 0.3) {
+      audio.playbackRate *= 3;
+    }
+
+    audio.currentTime = Math.random() * 1.5;
+
+    try {
+      let source = audioCtx.createMediaElementSource(audio);
+      let panner = audioCtx.createStereoPanner();
+
+      source.connect(panner);
+      panner.connect(audioCtx.destination);
+
+      let interval = setInterval(() => {
+        panner.pan.value = (Math.random() * 2 - 1);
+      }, 30);
+
+      audio.onended = () => clearInterval(interval);
+    } catch (e) {
+      console.log("Audio node error:", e);
+    }
+
+    audio.play().catch(err => {
+      console.log("Playback failed:", err);
+    });
+  }
 }
 
-// SOUND
-let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let intensity = 200;
+// CHAOTIC CONFIRM
+async function chaoticConfirm() {
+  const img = document.getElementById("omniImage");
+  img.style.display = "block";
+
+  playChaosAudio();
+
+  await new Promise(r => setTimeout(r, 300));
+
+  let result = confirm("Are you sure?");
+  img.style.display = "none";
+  return result;
+}
+
+// EFFECTS
 function beep() {
   let osc = audioCtx.createOscillator();
   osc.type = "sawtooth";
-  osc.frequency.setValueAtTime(intensity, audioCtx.currentTime);
+  osc.frequency.setValueAtTime(200, audioCtx.currentTime);
   osc.connect(audioCtx.destination);
   osc.start();
   osc.stop(audioCtx.currentTime + 0.1);
-  intensity += 30;
 }
 
-// CURSOR CHAOS
-setInterval(() => {
-  if (Math.random() < 0.3) {
-    document.body.style.cursor =
-      ["pointer","wait","crosshair","not-allowed"][Math.floor(Math.random()*4)];
-  }
-}, 400);
-
-// GLITCH
 function glitch() {
   document.body.classList.add("glitch");
   setTimeout(()=>document.body.classList.remove("glitch"), 200);
 }
 
-// SCREEN WOBBLE
 function screenWobble(intensity = 20, duration = 500) {
   let start = Date.now();
   let body = document.body;
@@ -168,66 +198,31 @@ function screenWobble(intensity = 20, duration = 500) {
   }, 16);
 }
 
-// BUTTON MOVEMENT
+// BUTTON CHAOS
 let btn = document.getElementById("btn");
 btn.onmousemove = () => {
   btn.style.left = Math.random()*window.innerWidth + "px";
   btn.style.top = Math.random()*window.innerHeight + "px";
 };
 
-// CHAOTIC CONFIRM FUNCTION
-async function chaoticConfirm() {
-  const phrases = ["Are you sure?"];
-  const img = document.getElementById("omniImage");
-
-  img.style.display = "block";
-
-  let toSpeak = [];
-  let count = 2 + Math.floor(Math.random() * 2);
-  for (let i = 0; i < count; i++) {
-    toSpeak.push(phrases[Math.floor(Math.random() * phrases.length)]);
-  }
-
-  toSpeak.forEach((p, i) => {
-    setTimeout(() => speak(p), i * 300);
-  });
-
-  await new Promise(r => setTimeout(r, 500));
-  let result = confirm("Are you sure?");
-  img.style.display = "none";
-  return result;
-}
-
-// INPUT HANDLER
+// INPUT
 document.getElementById("input").oninput = async (e) => {
   if (!(await chaoticConfirm())) {
     e.target.value = "";
-    return;
-  }
-  if (Math.random() < 0.3) {
-    beep();
-    speak("Input rejected.");
-    e.target.value = e.target.value.split("").sort(()=>Math.random()-0.5).join("");
-    screenWobble(15, 400);
   }
 };
 
-// CHECKBOX HANDLER
+// CHECKBOX
 document.getElementById("check").onchange = async (e) => {
   if (!(await chaoticConfirm())) {
     e.target.checked = false;
-    return;
-  }
-  if (Math.random() < 0.8) {
-    e.target.checked = false;
-    speak("That was incorrect.");
-    screenWobble(20, 500);
   }
 };
 
-// BUTTON CLICK HANDLER
+// BUTTON CLICK
 btn.onclick = async () => {
   if (!(await chaoticConfirm())) return;
+
   stage++;
   beep();
   glitch();
@@ -235,78 +230,27 @@ btn.onclick = async () => {
 
   let label = document.getElementById("label");
 
-  if (stage === 1) {
-    label.innerText = "Type 'human' backwards.";
-    speak("Suspicious human detected.");
-  }
-  else if (stage === 2) {
-    label.innerText = "Select all images containing regret.";
-    spawnPopup("Images failed.");
-    speak("Regret is not measurable.");
-  }
-  else if (stage === 3) {
-    label.innerText = "Do NOT click anything.";
-    speak("Do not proceed.");
-    setTimeout(()=>label.innerText="Why did you click?",2000);
-  }
-  else if (stage === 4) {
-    label.innerText = "Set progress to exactly 73%.";
-    speak("Precision required.");
-  }
-  else if (stage === 5) {
-    label.innerText = "Final verification...";
-    speak("Final judgment initiated.");
-    for (let i=0;i<10;i++){
-      setTimeout(()=>spawnPopup("Verifying..."), i*200);
-    }
-  }
-  else if (stage === 6) {
-    triggerCrash();
-  }
-  else {
-    label.innerText = "You are not human.";
-    speak("Conclusion. You have failed.");
-  }
+  if (stage === 1) label.innerText = "Type 'human' backwards.";
+  else if (stage === 2) label.innerText = "Select all images containing regret.";
+  else if (stage === 3) label.innerText = "Do NOT click anything.";
+  else if (stage === 4) label.innerText = "Set progress to exactly 73%.";
+  else if (stage === 5) label.innerText = "Final verification...";
+  else if (stage === 6) triggerCrash();
+  else label.innerText = "You are not human.";
 };
 
-// POPUPS
-function spawnPopup(text) {
-  let d = document.createElement("div");
-  d.className = "popup";
-  d.style.left = Math.random()*window.innerWidth + "px";
-  d.style.top = Math.random()*window.innerHeight + "px";
-  d.innerHTML = "<p>"+text+"</p><button>OK</button>";
-
-  d.querySelector("button").onclick = () => d.remove();
-
-  d.onmouseover = () => {
-    d.style.left = Math.random()*window.innerWidth + "px";
-    d.style.top = Math.random()*window.innerHeight + "px";
-  };
-
-  document.body.appendChild(d);
-}
-
-// FAKE CRASH
+// CRASH
 function triggerCrash() {
   document.getElementById("crash").style.display = "block";
-  speak("System failure detected.");
   screenWobble(50, 1000);
-  setTimeout(() => {
-    location.reload();
-  }, 4000);
+  setTimeout(() => location.reload(), 4000);
 }
 
-// PROGRESS BAR RANDOMIZATION
+// PROGRESS CHAOS
 setInterval(() => {
   progress += Math.random()*20 - 10;
   progress = Math.max(0, Math.min(100, progress));
   document.getElementById("bar").style.width = progress + "%";
-
-  if (Math.random() < 0.3) {
-    spawnPopup("Processing...");
-    screenWobble(10, 300);
-  }
 }, 1000);
 
 </script>
@@ -314,7 +258,6 @@ setInterval(() => {
 </body>
 </html>
 """
-
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -326,10 +269,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         else:
             return super().do_GET()
 
-
 def open_browser():
     webbrowser.open(f"http://localhost:{PORT}")
-
 
 with socketserver.TCPServer(("", PORT), Handler) as httpd:
     print(f"Serving at http://localhost:{PORT}")
